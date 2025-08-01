@@ -16,7 +16,7 @@ struct ARTrackingView: View {
             ARViewContainer(session: model.session)
                 .edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("📍 位置")
                 Text(String(format: "x: %.2f, y: %.2f, z: %.2f",
                             model.position.x, model.position.y, model.position.z))
@@ -24,6 +24,8 @@ struct ARTrackingView: View {
                 Text("🧭 向き（ラジアン）")
                 Text(String(format: "pitch: %.2f, yaw: %.2f, roll: %.2f",
                             model.eulerAngles.x, model.eulerAngles.y, model.eulerAngles.z))
+                
+                Toggle(model.isSending ? "送信中" : "送信停止中", isOn: $model.isSending)
             }
             .padding()
             .background(Color.black.opacity(0.5))

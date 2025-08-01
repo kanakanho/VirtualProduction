@@ -8,10 +8,17 @@
 import Foundation
 import ARKit
 import Combine
+import simd
+
+struct Euler: Codable {
+    let x: Float
+    let y: Float
+    let z: Float
+}
 
 struct SendPositionAndRotation: Codable {
-    let position: SIMD3<Float>
-    let rotation: SIMD3<Float>
+    let position: Euler
+    let rotation: Euler
 }
 
 class ARTrackingModel: NSObject, ObservableObject, ARSessionDelegate {
@@ -20,6 +27,16 @@ class ARTrackingModel: NSObject, ObservableObject, ARSessionDelegate {
     
     @Published var position: SIMD3<Float> = .zero
     @Published var eulerAngles: SIMD3<Float> = .zero
+    
+    @Published var isSending: Bool = false {
+        didSet {
+            if isSending {
+                webSocketClient.connect()
+            } else {
+                webSocketClient.disconnect()
+            }
+        }
+    }
     
     override init() {
         super.init()
@@ -43,17 +60,31 @@ class ARTrackingModel: NSObject, ObservableObject, ARSessionDelegate {
                                        transform.columns.3.z)
         let rotation = frame.camera.eulerAngles
 
+        if !isSending {
+            return
+        }
         DispatchQueue.main.async {
             self.position = translation
             self.eulerAngles = rotation
             
-            let data = SendPositionAndRotation(position: translation, rotation: rotation)
+            let data = SendPositionAndRotation(position: Euler(x: translation.x, y: translation.y, z: translation.z), rotation: Euler(x: rotation.x, y: rotation.y, z: rotation.z))
             do {
                 let jsonData = try JSONEncoder().encode(data)
-                self.webSocketClient.send(jsonData)
+                let jsonDataString = String(data: jsonData, encoding: .utf8) ?? ""
+                self.webSocketClient.send(jsonDataString)
             } catch {
                 print("Failed to encode data: \(error)")
             }
         }
+        
+//        DispatchQueue.main.async {
+//            do {
+//                let jsonData = try JSONEncoder().encode(frame.camera.transform.inverse)
+//                let jsonDataString = String(data: jsonData, encoding: .utf8) ?? ""
+//                self.webSocketClient.send(jsonDataString)
+//            } catch {
+//                print("Failed to encode data: \(error)")
+//            }
+//        }
     }
 }
